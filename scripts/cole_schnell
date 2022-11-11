@@ -1,0 +1,61 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tabulizer)
+library(janitor)
+library(sjmisc)
+```
+
+```{r}
+link <- "https://www.como.gov/wp-content/uploads/2022/11/BSD_MonthlyPermits_22-10.pdf"
+
+columns = c("Permit #", "Type", "Workclass", "Status", "Main", "Address", "District", "Parcel")
+
+
+area <- locate_areas(link, 3)
+
+list(area[[1]])
+
+area = list(c(53.51952,10.99205,562.68667,781.00963))
+
+permits <- extract_tables(link, pages = 3, guess = F, area = area, output = "data.frame")
+
+permits <- permits[[1]]
+
+permits_1 <- permits %>% 
+  clean_names() %>% 
+  filter(!grepl("Application Date|Zone|ADDITION", permit_type)) %>%
+  mutate(id = if_else(grepl("BLDR", permit_type), permit_type, "")) %>% 
+  mutate(address = if_else(grepl("MO", main_address), main_address, ""))
+
+permits_2 <- permits %>% 
+  clean_names() %>% 
+  filter(!grepl("Application Date|Zone|ADDITION", permit_type))
+
+permits_2 <- permits_2 %>% select(permit_type) %>% as.list()
+
+permits_2 = permits_2[1]
+
+tb = tibble(
+  id = character(),
+  type = character(),
+  date = date(),
+  kind = character(),
+  description = character()
+)
+
+l = list()
+for (x in permits_2) {
+  if (grepl("BLDR", x)){
+    if (length(l) == 5){
+      tb[nrow(tb) + 1,] = l
+      l = list()}
+    append(1, x)
+    i = 0
+  }
+  i++
+}
+```
